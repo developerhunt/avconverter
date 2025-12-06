@@ -2,204 +2,161 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Creator Studio | Mobile & Desktop</title>
-    
-    <script src="coi-serviceworker.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Cloud Render | High Speed</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
-    
     <style>
-        /* Base Theme */
-        body {
-            background-color: #0f172a;
-            background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-                              radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
-                              radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
-            font-family: 'Inter', system-ui, sans-serif;
-            -webkit-tap-highlight-color: transparent; /* Remove blue tap box on mobile */ 
+        body { background: #0f172a; font-family: sans-serif; }
+        .glass {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.1);
         }
-
-        /* Glass Panel - Responsive Blur */
-        .glass-panel {
-            background: rgba(30, 41, 59, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        
-        /* Only enable heavy blur on larger screens to save mobile battery */
-        @media (min-width: 768px) {
-            .glass-panel {
-                backdrop-filter: blur(20px);
-                -webkit-backdrop-filter: blur(20px);
-                background: rgba(30, 41, 59, 0.4);
-            }
-        }
-
-        .gradient-text {
-            background: linear-gradient(to right, #818cf8, #c084fc, #f472b6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        /* Custom Scrollbar for Logs */
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-        
-        /* Loading Animation */
         .loader {
-            width: 24px;
-            height: 24px;
             border: 3px solid rgba(255,255,255,0.1);
+            border-top: 3px solid #6366f1;
             border-radius: 50%;
-            border-top-color: #c084fc;
-            animation: spin 0.8s ease-in-out infinite;
+            width: 24px; height: 24px;
+            animation: spin 1s linear infinite;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="min-h-screen text-slate-200 flex flex-col lg:items-center lg:justify-center p-4 selection:bg-indigo-500 selection:text-white">
+<body class="text-white min-h-screen flex flex-col items-center justify-center p-4">
 
-    <div class="glass-panel w-full lg:max-w-6xl rounded-2xl lg:rounded-3xl p-5 md:p-8 lg:p-10 relative overflow-hidden shadow-2xl flex flex-col gap-8">
+    <div class="glass w-full max-w-lg rounded-2xl p-6 shadow-2xl relative overflow-hidden">
         
-        <div class="text-center space-y-2">
-            <h1 class="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight gradient-text">Creator Studio</h1>
-            <p class="text-slate-400 text-sm md:text-base lg:text-lg">Audio to Video Converter</p>
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+                Turbo Render
+            </h1>
+            <p class="text-slate-400 text-sm">Server-Side FFmpeg Engine</p>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
+        <div class="space-y-4">
             
-            <div class="space-y-5 order-2 lg:order-1">
-                
-                <div class="bg-slate-800/40 rounded-xl p-1 border border-dashed border-slate-600 hover:border-indigo-400 transition-colors">
-                    <div class="relative h-24 md:h-32 flex flex-col items-center justify-center cursor-pointer" onclick="document.getElementById('imageInput').click()">
-                        <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleFile(this, 'imageStatus')">
-                        <svg class="w-8 h-8 text-indigo-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        <span id="imageStatus" class="text-sm font-medium text-slate-300">Select Image</span>
-                    </div>
+            <div onclick="document.getElementById('imgIn').click()" 
+                 class="border border-dashed border-slate-600 rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-slate-800 transition">
+                <div class="bg-indigo-500/20 p-2 rounded-lg text-indigo-400">🖼️</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-slate-200">Upload Image</p>
+                    <p id="imgName" class="text-xs text-slate-500 truncate">No file chosen</p>
                 </div>
-
-                <div class="bg-slate-800/40 rounded-xl p-1 border border-dashed border-slate-600 hover:border-purple-400 transition-colors">
-                    <div class="relative h-24 md:h-32 flex flex-col items-center justify-center cursor-pointer" onclick="document.getElementById('audioInput').click()">
-                        <input type="file" id="audioInput" accept="audio/*" class="hidden" onchange="handleFile(this, 'audioStatus')">
-                        <svg class="w-8 h-8 text-purple-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
-                        <span id="audioStatus" class="text-sm font-medium text-slate-300">Select Audio</span>
-                    </div>
-                </div>
-
-                <button onclick="createVideo()" id="renderBtn" disabled class="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 font-bold text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 active:scale-95 transition-transform">
-                    <span id="btnText">Render Video</span>
-                </button>
+                <input type="file" id="imgIn" accept="image/*" hidden onchange="setFile(this, 'imgName')">
             </div>
 
-            <div class="flex flex-col gap-4 order-1 lg:order-2">
-                
-                <div class="w-full aspect-video bg-black/50 rounded-xl overflow-hidden relative border border-slate-700 flex items-center justify-center" id="videoContainer">
-                    <div class="text-slate-600 flex flex-col items-center">
-                        <svg class="w-12 h-12 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span class="text-xs uppercase tracking-widest opacity-60">Preview</span>
-                    </div>
-                    
-                    <div id="progressOverlay" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20">
-                        <div class="loader mb-3"></div>
-                        <p class="text-xs text-purple-300 font-mono animate-pulse">RENDERING...</p>
-                    </div>
+            <div onclick="document.getElementById('audIn').click()" 
+                 class="border border-dashed border-slate-600 rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-slate-800 transition">
+                <div class="bg-purple-500/20 p-2 rounded-lg text-purple-400">🎵</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-slate-200">Upload Audio</p>
+                    <p id="audName" class="text-xs text-slate-500 truncate">No file chosen</p>
                 </div>
-
-                <div class="h-32 bg-[#0B1120] rounded-lg border border-slate-800 p-3 overflow-y-auto custom-scrollbar font-mono text-[10px] md:text-xs">
-                    <div class="flex items-center gap-2 mb-2 pb-2 border-b border-slate-800 text-slate-500">
-                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> CONSOLE
-                    </div>
-                    <div id="logs" class="space-y-1 text-slate-400">
-                        <div>> Ready...</div>
-                    </div>
-                </div>
+                <input type="file" id="audIn" accept="audio/*" hidden onchange="setFile(this, 'audName')">
             </div>
+
+            <button id="btn" onclick="processVideo()" disabled
+                    class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 py-4 rounded-xl font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition active:scale-95 flex justify-center items-center gap-2">
+                <span>Start Cloud Render</span>
+            </button>
         </div>
-        
-        <div class="text-center text-slate-600 text-[10px] lg:text-xs mt-4">
-            Processed locally in your browser
+
+        <div id="resultArea" class="hidden mt-6 pt-6 border-t border-slate-700 text-center">
+            <div id="loading" class="flex flex-col items-center gap-3">
+                <div class="loader"></div>
+                <p class="text-sm text-indigo-300 animate-pulse">Processing on Server...</p>
+            </div>
+            
+            <a id="downloadLink" href="#" class="hidden block bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-lg font-medium transition">
+                ⬇️ Download Video
+            </a>
+            
+            <p id="errorMsg" class="hidden text-red-400 text-sm mt-2"></p>
         </div>
+
     </div>
 
     <script>
-        const { createFFmpeg, fetchFile } = FFmpeg;
-        const ffmpeg = createFFmpeg({ log: true });
-        let imageFile = null;
-        let audioFile = null;
+        // ==========================================
+        // ⚠️ STEP 1: DEPLOY TO RENDER
+        // ⚠️ STEP 2: PASTE YOUR RENDER URL BELOW
+        // Example: "https://my-app.onrender.com"
+        // ==========================================
+        const BACKEND_URL = "INSERT_YOUR_RENDER_URL_HERE"; 
+        
+        let imgFile = null;
+        let audFile = null;
 
-        const log = (msg, type) => {
-            const box = document.getElementById('logs');
-            const color = type === 'err' ? 'text-red-400' : type === 'suc' ? 'text-emerald-400' : 'text-slate-300';
-            box.innerHTML += `<div class="${color}">> ${msg}</div>`;
-            box.scrollTop = box.scrollHeight;
-        }
-
-        function handleFile(input, id) {
+        function setFile(input, labelId) {
             const file = input.files[0];
-            if (!file) return;
-            // Truncate long filenames for mobile view
-            const name = file.name.length > 20 ? file.name.substring(0, 15) + '...' : file.name;
-            document.getElementById(id).innerHTML = `<span class="text-indigo-300">${name}</span>`;
-            
-            if (input.id === 'imageInput') imageFile = file;
-            if (input.id === 'audioInput') audioFile = file;
-            
-            if (imageFile && audioFile) {
-                const btn = document.getElementById('renderBtn');
-                btn.disabled = false;
-                btn.classList.add('ring-2', 'ring-indigo-500', 'ring-offset-2', 'ring-offset-slate-900');
-                log("Files ready.", 'suc');
+            if(file) {
+                document.getElementById(labelId).innerText = file.name;
+                document.getElementById(labelId).classList.add("text-white");
+                if(input.id === 'imgIn') imgFile = file;
+                if(input.id === 'audIn') audFile = file;
+                checkReady();
             }
         }
 
-        async function createVideo() {
-            const btn = document.getElementById('renderBtn');
-            const overlay = document.getElementById('progressOverlay');
-            
+        function checkReady() {
+            if(imgFile && audFile) {
+                document.getElementById('btn').disabled = false;
+            }
+        }
+
+        async function processVideo() {
+            const btn = document.getElementById('btn');
+            const resultArea = document.getElementById('resultArea');
+            const loading = document.getElementById('loading');
+            const downloadLink = document.getElementById('downloadLink');
+            const errorMsg = document.getElementById('errorMsg');
+
+            // Reset UI
+            if (BACKEND_URL.includes("INSERT_YOUR")) {
+                alert("Please configure the Backend URL in the code!");
+                return;
+            }
+
             btn.disabled = true;
-            btn.classList.remove('ring-2');
-            overlay.classList.remove('hidden');
-            
+            resultArea.classList.remove('hidden');
+            loading.classList.remove('hidden');
+            downloadLink.classList.add('hidden');
+            errorMsg.classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append("image", imgFile);
+            formData.append("audio", audFile);
+
             try {
-                if (!ffmpeg.isLoaded()) await ffmpeg.load();
+                // Send to Server
+                const response = await fetch(`${BACKEND_URL}/render`, {
+                    method: 'POST',
+                    body: formData
+                });
 
-                ffmpeg.FS('writeFile', 'img.png', await fetchFile(imageFile));
-                ffmpeg.FS('writeFile', 'aud.mp3', await fetchFile(audioFile));
+                if (!response.ok) throw new Error("Server failed to render");
 
-                log("Rendering started...");
+                // Get Blob
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
 
-                await ffmpeg.run(
-                    '-loop', '1', '-i', 'img.png', '-i', 'aud.mp3',
-                    '-c:v', 'libx264', '-tune', 'stillimage',
-                    '-c:a', 'aac', '-b:a', '192k', '-pix_fmt', 'yuv420p',
-                    '-shortest', 'out.mp4'
-                );
-
-                const data = ffmpeg.FS('readFile', 'out.mp4');
-                const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
-
-                document.getElementById('videoContainer').innerHTML = `
-                    <video controls src="${url}" class="w-full h-full object-contain" autoplay></video>
-                `;
-
-                // Auto download
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `Video_${Date.now()}.mp4`;
-                a.click();
+                // Show Download
+                loading.classList.add('hidden');
+                downloadLink.href = url;
+                downloadLink.download = `Cloud_Video_${Date.now()}.mp4`;
+                downloadLink.classList.remove('hidden');
                 
-                log("Done! Downloading...", 'suc');
-                document.getElementById('btnText').innerText = "Render Again";
-
-            } catch (e) {
-                log(e.message, 'err');
-                alert("Error: " + e.message);
-            } finally {
+                // Auto Click
+                downloadLink.click();
+                
+                btn.innerText = "Render Another";
                 btn.disabled = false;
-                overlay.classList.add('hidden');
+
+            } catch (err) {
+                loading.classList.add('hidden');
+                errorMsg.innerText = "Error: " + err.message;
+                errorMsg.classList.remove('hidden');
+                btn.disabled = false;
             }
         }
     </script>
