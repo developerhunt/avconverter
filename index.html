@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Creator Studio | Mobile & Desktop</title>
+    
+    <script src="coi-serviceworker.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
+    
+    <style>
+        /* Base Theme */
+        body {
+            background-color: #0f172a;
+            background-image: radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                              radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                              radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            font-family: 'Inter', system-ui, sans-serif;
+            -webkit-tap-highlight-color: transparent; /* Remove blue tap box on mobile */
+        }
+
+        /* Glass Panel - Responsive Blur */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        /* Only enable heavy blur on larger screens to save mobile battery */
+        @media (min-width: 768px) {
+            .glass-panel {
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                background: rgba(30, 41, 59, 0.4);
+            }
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, #818cf8, #c084fc, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Custom Scrollbar for Logs */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        
+        /* Loading Animation */
+        .loader {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top-color: #c084fc;
+            animation: spin 0.8s ease-in-out infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="min-h-screen text-slate-200 flex flex-col lg:items-center lg:justify-center p-4 selection:bg-indigo-500 selection:text-white">
+
+    <div class="glass-panel w-full lg:max-w-6xl rounded-2xl lg:rounded-3xl p-5 md:p-8 lg:p-10 relative overflow-hidden shadow-2xl flex flex-col gap-8">
+        
+        <div class="text-center space-y-2">
+            <h1 class="text-3xl md:text-5xl lg:text-6xl font-black tracking-tight gradient-text">Creator Studio</h1>
+            <p class="text-slate-400 text-sm md:text-base lg:text-lg">Audio to Video Converter</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
+            
+            <div class="space-y-5 order-2 lg:order-1">
+                
+                <div class="bg-slate-800/40 rounded-xl p-1 border border-dashed border-slate-600 hover:border-indigo-400 transition-colors">
+                    <div class="relative h-24 md:h-32 flex flex-col items-center justify-center cursor-pointer" onclick="document.getElementById('imageInput').click()">
+                        <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleFile(this, 'imageStatus')">
+                        <svg class="w-8 h-8 text-indigo-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span id="imageStatus" class="text-sm font-medium text-slate-300">Select Image</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/40 rounded-xl p-1 border border-dashed border-slate-600 hover:border-purple-400 transition-colors">
+                    <div class="relative h-24 md:h-32 flex flex-col items-center justify-center cursor-pointer" onclick="document.getElementById('audioInput').click()">
+                        <input type="file" id="audioInput" accept="audio/*" class="hidden" onchange="handleFile(this, 'audioStatus')">
+                        <svg class="w-8 h-8 text-purple-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+                        <span id="audioStatus" class="text-sm font-medium text-slate-300">Select Audio</span>
+                    </div>
+                </div>
+
+                <button onclick="createVideo()" id="renderBtn" disabled class="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 font-bold text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 active:scale-95 transition-transform">
+                    <span id="btnText">Render Video</span>
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-4 order-1 lg:order-2">
+                
+                <div class="w-full aspect-video bg-black/50 rounded-xl overflow-hidden relative border border-slate-700 flex items-center justify-center" id="videoContainer">
+                    <div class="text-slate-600 flex flex-col items-center">
+                        <svg class="w-12 h-12 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span class="text-xs uppercase tracking-widest opacity-60">Preview</span>
+                    </div>
+                    
+                    <div id="progressOverlay" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center z-20">
+                        <div class="loader mb-3"></div>
+                        <p class="text-xs text-purple-300 font-mono animate-pulse">RENDERING...</p>
+                    </div>
+                </div>
+
+                <div class="h-32 bg-[#0B1120] rounded-lg border border-slate-800 p-3 overflow-y-auto custom-scrollbar font-mono text-[10px] md:text-xs">
+                    <div class="flex items-center gap-2 mb-2 pb-2 border-b border-slate-800 text-slate-500">
+                        <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div> CONSOLE
+                    </div>
+                    <div id="logs" class="space-y-1 text-slate-400">
+                        <div>> Ready...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center text-slate-600 text-[10px] lg:text-xs mt-4">
+            Processed locally in your browser
+        </div>
+    </div>
+
+    <script>
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+        let imageFile = null;
+        let audioFile = null;
+
+        const log = (msg, type) => {
+            const box = document.getElementById('logs');
+            const color = type === 'err' ? 'text-red-400' : type === 'suc' ? 'text-emerald-400' : 'text-slate-300';
+            box.innerHTML += `<div class="${color}">> ${msg}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function handleFile(input, id) {
+            const file = input.files[0];
+            if (!file) return;
+            // Truncate long filenames for mobile view
+            const name = file.name.length > 20 ? file.name.substring(0, 15) + '...' : file.name;
+            document.getElementById(id).innerHTML = `<span class="text-indigo-300">${name}</span>`;
+            
+            if (input.id === 'imageInput') imageFile = file;
+            if (input.id === 'audioInput') audioFile = file;
+            
+            if (imageFile && audioFile) {
+                const btn = document.getElementById('renderBtn');
+                btn.disabled = false;
+                btn.classList.add('ring-2', 'ring-indigo-500', 'ring-offset-2', 'ring-offset-slate-900');
+                log("Files ready.", 'suc');
+            }
+        }
+
+        async function createVideo() {
+            const btn = document.getElementById('renderBtn');
+            const overlay = document.getElementById('progressOverlay');
+            
+            btn.disabled = true;
+            btn.classList.remove('ring-2');
+            overlay.classList.remove('hidden');
+            
+            try {
+                if (!ffmpeg.isLoaded()) await ffmpeg.load();
+
+                ffmpeg.FS('writeFile', 'img.png', await fetchFile(imageFile));
+                ffmpeg.FS('writeFile', 'aud.mp3', await fetchFile(audioFile));
+
+                log("Rendering started...");
+
+                await ffmpeg.run(
+                    '-loop', '1', '-i', 'img.png', '-i', 'aud.mp3',
+                    '-c:v', 'libx264', '-tune', 'stillimage',
+                    '-c:a', 'aac', '-b:a', '192k', '-pix_fmt', 'yuv420p',
+                    '-shortest', 'out.mp4'
+                );
+
+                const data = ffmpeg.FS('readFile', 'out.mp4');
+                const url = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+
+                document.getElementById('videoContainer').innerHTML = `
+                    <video controls src="${url}" class="w-full h-full object-contain" autoplay></video>
+                `;
+
+                // Auto download
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Video_${Date.now()}.mp4`;
+                a.click();
+                
+                log("Done! Downloading...", 'suc');
+                document.getElementById('btnText').innerText = "Render Again";
+
+            } catch (e) {
+                log(e.message, 'err');
+                alert("Error: " + e.message);
+            } finally {
+                btn.disabled = false;
+                overlay.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
