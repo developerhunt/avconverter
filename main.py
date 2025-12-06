@@ -35,45 +35,46 @@ async def render_video(
     image: UploadFile = File(...), 
     audio: UploadFile = File(...)
 ):
-    # 1. Generate Session ID
     session_id = str(uuid.uuid4())
     
-    # 2. DETECT FILE EXTENSIONS (The Fix) 🛠️
-    # This prevents the .m4a vs .mp3 crash
-    img_ext = os.path.splitext(image.filename)[1] or ".jpg"
-    aud_ext = os.path.splitext(audio.filename)[1] or ".mp3"
+    # 1. Detect Extensions safely
+    img_ext = os.path.splitext(image.filename)[1].lower() or ".jpg"
+    aud_ext = os.path.splitext(audio.filename)[1].lower() or ".mp3"
 
-    # 3. Create Dynamic Paths
     img_path = f"input_{session_id}{img_ext}"
     aud_path = f"input_{session_id}{aud_ext}"
     vid_path = f"output_{session_id}.mp4"
 
     try:
-        # 4. Save Files
+        # 2. Save Files
         with open(img_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
         with open(aud_path, "wb") as buffer:
             shutil.copyfileobj(audio.file, buffer)
 
-        # 5. Run FFmpeg
+        # 3. FFmpeg Command (Optimized for 512MB RAM)
+        # -vf "scale=1280:-2" -> Resizes video to 720p width, auto height
+        # This prevents the server from crashing due to low memory
         command = [
             "ffmpeg", "-y",
             "-loop", "1",
             "-i", img_path,
             "-i", aud_path,
+            "-vf", "scale=1280:-2",   # <--- THE CRITICAL FIX
             "-c:v", "libx264",
             "-tune", "stillimage",
             "-preset", "ultrafast",
-            "-c:a", "aac",        # AAC is native for .m4a and .mp4
-            "-b:a", "192k",
+            "-c:a", "aac",
+            "-b:a", "128k",           # Lower audio bitrate slightly to save buffer
             "-pix_fmt", "yuv420p",
             "-shortest",
             vid_path
         ]
         
+        # Run subprocess
         subprocess.run(command, check=True)
 
-        # 6. Schedule Cleanup
+        # 4. Schedule Cleanup
         background_tasks.add_task(remove_file, img_path)
         background_tasks.add_task(remove_file, aud_path)
         background_tasks.add_task(remove_file, vid_path)
@@ -84,6 +85,5 @@ async def render_video(
         # Cleanup on error
         if os.path.exists(img_path): os.remove(img_path)
         if os.path.exists(aud_path): os.remove(aud_path)
-        # Check Render Logs if you see this error!
-        print(f"Server Error: {str(e)}") 
+        print(f"Error: {e}")
         return {"error": str(e)}
