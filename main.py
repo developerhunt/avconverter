@@ -37,35 +37,38 @@ async def render_video(
 ):
     session_id = str(uuid.uuid4())
     
-    # 1. Detect Extensions safely
-    img_ext = os.path.splitext(image.filename)[1].lower() or ".jpg"
-    aud_ext = os.path.splitext(audio.filename)[1].lower() or ".mp3"
+    # 1. Detect Extensions (Safely handle .m4a, .png, etc.)
+    img_ext = os.path.splitext(image.filename)[1].lower()
+    if not img_ext: img_ext = ".jpg"
+    
+    aud_ext = os.path.splitext(audio.filename)[1].lower()
+    if not aud_ext: aud_ext = ".mp3"
 
     img_path = f"input_{session_id}{img_ext}"
     aud_path = f"input_{session_id}{aud_ext}"
     vid_path = f"output_{session_id}.mp4"
 
     try:
-        # 2. Save Files
+        # 2. Save Files to Server
         with open(img_path, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
         with open(aud_path, "wb") as buffer:
             shutil.copyfileobj(audio.file, buffer)
 
-        # 3. FFmpeg Command (Optimized for 512MB RAM)
-        # -vf "scale=1280:-2" -> Resizes video to 720p width, auto height
-        # This prevents the server from crashing due to low memory
+        # 3. FFmpeg Command (Optimized for Free Tier)
+        # -vf scale=1280:-2  -> Resizes video to 720p (Safe for 512MB RAM)
+        # -b:a 128k          -> Reduces audio memory usage slightly
         command = [
             "ffmpeg", "-y",
             "-loop", "1",
             "-i", img_path,
             "-i", aud_path,
-            "-vf", "scale=1280:-2",   # <--- THE CRITICAL FIX
+            "-vf", "scale=1280:-2",  # <--- THIS IS THE CRITICAL FIX
             "-c:v", "libx264",
             "-tune", "stillimage",
             "-preset", "ultrafast",
             "-c:a", "aac",
-            "-b:a", "128k",           # Lower audio bitrate slightly to save buffer
+            "-b:a", "128k",
             "-pix_fmt", "yuv420p",
             "-shortest",
             vid_path
@@ -82,8 +85,8 @@ async def render_video(
         return FileResponse(vid_path, media_type="video/mp4", filename="Rendered_Video.mp4")
 
     except Exception as e:
-        # Cleanup on error
+        # Cleanup if it crashes
         if os.path.exists(img_path): os.remove(img_path)
         if os.path.exists(aud_path): os.remove(aud_path)
-        print(f"Error: {e}")
+        print(f"CRITICAL ERROR: {e}") # This will show in Render logs
         return {"error": str(e)}
