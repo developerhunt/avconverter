@@ -78,9 +78,7 @@
 
     <script>
         // ==========================================
-        // ⚠️ STEP 1: DEPLOY TO RENDER
-        // ⚠️ STEP 2: PASTE YOUR RENDER URL BELOW
-        // Example: "https://my-app.onrender.com"
+        // ✅ CONFIGURATION: CONNECTED TO YOUR BACKEND
         // ==========================================
         const BACKEND_URL = "https://avconverter.onrender.com"; 
         
@@ -111,12 +109,6 @@
             const downloadLink = document.getElementById('downloadLink');
             const errorMsg = document.getElementById('errorMsg');
 
-            // Reset UI
-            if (BACKEND_URL.includes("INSERT_YOUR")) {
-                alert("Please configure the Backend URL in the code!");
-                return;
-            }
-
             btn.disabled = true;
             resultArea.classList.remove('hidden');
             loading.classList.remove('hidden');
@@ -134,7 +126,7 @@
                     body: formData
                 });
 
-                if (!response.ok) throw new Error("Server failed to render");
+                if (!response.ok) throw new Error("Server failed to render. (Check Render Logs)");
 
                 // Get Blob
                 const blob = await response.blob();
